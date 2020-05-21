@@ -19,6 +19,7 @@ x-------x
 |
 |
 |
+
 ''', \
 2: '''\
 x-------x
@@ -27,6 +28,7 @@ x-------x
 |
 |
 |
+
 ''', \
 3: '''\
 x-------x
@@ -35,6 +37,7 @@ x-------x
 |       |
 |
 |
+
 ''', \
 4: '''\
 x-------x
@@ -43,6 +46,7 @@ x-------x
 |      /|\\
 |
 |
+
 ''', \
 5: '''\
 x-------x
@@ -51,6 +55,7 @@ x-------x
 |      /|\\
 |      /
 |
+
 ''', \
 6: '''\
 x-------x
@@ -59,6 +64,7 @@ x-------x
 |      /|\\
 |      / \\
 |
+
 '''}
     
 def welcome_screen():
@@ -78,10 +84,14 @@ def choose_word(file_path, index):
     :return: the word in the given index in the file in the given file path
     :rtype: str '''
     
+    chosen_word = ""
+    
     with open(file_path, 'r') as file:
         words_file = file.read()
-        all_words = words_file.rsplit(' ')
-        return all_words[(index - 1) % len(all_words)] 
+        all_words = words_file.split(' ')
+        choose_word = all_words[(index - 1) % len(all_words)]
+
+    return choose_word
 
 def check_win(secret_word, old_letters_guessed):
     '''Checks if all the letter that composed the given word are in the given list
@@ -94,14 +104,14 @@ def check_win(secret_word, old_letters_guessed):
     :rtype: bool'''
     
     for char in secret_word:
-        if(not char in old_letters_guessed):
+        if char not in old_letters_guessed:
             return False
     
     return True        
 
 def show_hidden_word(secret_word, old_letters_guessed):
     '''Creates string that shows which letters have been exposed
-    and where there are letter that need to be revealed
+    and where there are letter that need to be revealed.
     :param secret_word: the word that the user needs to guess
     :param old_letters_guessed: the list of all the letter that already been guessed
     :type secret_word: str
@@ -109,7 +119,9 @@ def show_hidden_word(secret_word, old_letters_guessed):
     :return: string that shows which letters have been exposed
     and where there are letter that need to be revealed
     :rtype: str'''
+    
     my_str = ""
+    
     for char in secret_word:
         if char in old_letters_guessed:
             my_str += char + ' '
@@ -127,6 +139,7 @@ def check_valid_input(letter_guessed, old_letters_guessed):
     :return: returns true only if the input 
     is one character and it's an english character and the letter is a new letter
     :rtype: bool'''
+    
     if (not letter_guessed.isalpha()) or (len(letter_guessed) > 1):
         return False
         
@@ -141,13 +154,29 @@ def try_update_letter_guessed(letter_guessed, old_letters_guessed):
     :return: returns true only if the input 
     is one character and it's an english character and the letter is a new letter
     :rtype: bool'''
+    
     if check_valid_input(letter_guessed, old_letters_guessed):
-        old_letters_guessed.append(letter_guessed)
         return True
     else:
         print('X')
-        print('-> '.join(sorted(list(dict.fromkeys((old_letters_guessed))))))
+        if old_letters_guessed != []:
+            print('-> '.join(sorted(list(dict.fromkeys((old_letters_guessed))))))
         return False
+
+def check_state(letter_guessed, secret_word, old_letters_guessed):
+    '''Check if the given parameters are valid.
+    :param letter_guessed: the user guess
+    :param secret_word: the secret word
+    :param old_letters_guessed: all the letters guessed so far
+    :type letter_guessed: str
+    :type secret_word: str
+    :type old_letters_guessed: list
+    :return: returns True if the given letter is not in the word and it is a english letter and if it is one letter
+    False otherwise
+    :rtype: bool'''
+
+    return (letter_guessed not in secret_word) and (letter_guessed.isalpha()) and (len(letter_guessed) == 1) \
+        and (letter_guessed not in old_letters_guessed) 
 
 def main():
     welcome_screen()
@@ -157,29 +186,35 @@ def main():
     num_of_tries = 0
     letter_guessed = 'A'
     old_letters_guessed = []
+    state = 0 # 0 - mistake, 1 - correct, 2 - invalid
+    
     print("Let's start!\n")
-    while (num_of_tries < MAX_TRIES) and (not check_win(secret_word, old_letters_guessed)):
-        if (letter_guessed.isalpha()) and (letter_guessed not in secret_word):
+    while num_of_tries < MAX_TRIES and not check_win(secret_word, old_letters_guessed):
+        if state == 0:
             print(HANGMAN_PHOTOS[num_of_tries])
             print(show_hidden_word(secret_word, old_letters_guessed))
+        
         letter_guessed = input('Guess a letter: ').lower()
-        
-        while (try_update_letter_guessed(letter_guessed, old_letters_guessed) == True) and (letter_guessed in secret_word) \
-            and (not check_win(secret_word, old_letters_guessed)):
-            print(show_hidden_word(secret_word, old_letters_guessed))
-            letter_guessed = input('Guess a letter: ').lower()
-        
-        if (letter_guessed not in secret_word) and (letter_guessed.isalpha()):
-            print(':(')
+
+        if try_update_letter_guessed(letter_guessed, old_letters_guessed) == True and (letter_guessed in secret_word):
             old_letters_guessed.append(letter_guessed)
+            print(show_hidden_word(secret_word,old_letters_guessed))
+            state = 1
+        
+        elif check_state(letter_guessed, secret_word, old_letters_guessed):
+            state = 0
+            old_letters_guessed.append(letter_guessed)
+            print(':(\n')
             num_of_tries += 1
+
+        else:
+            state = 2
     
-    if not check_win(secret_word, old_letters_guessed):
-        print(HANGMAN_PHOTOS[num_of_tries])
-    print(show_hidden_word(secret_word, old_letters_guessed))   
-    if check_win(secret_word, old_letters_guessed):
+    if state == 1:
         print('WIN')
     else:
+        print(HANGMAN_PHOTOS[num_of_tries])
+        print(show_hidden_word(secret_word, old_letters_guessed))   
         print('LOSE')
         
     input("\nenter 'ENTER' to exit: ")
